@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>📌 Reminders</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+      position: relative;
+    }
+
+    .container {
+      max-width: 600px;
+      background: #fff;
+      margin: 60px auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    input, select, button {
+      width: calc(100% - 22px);
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: background 0.3s, color 0.3s, border 0.3s;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+
+    li {
+      background-color: #f9f9f9;
+      border-left: 6px solid #007bff;
+      margin-bottom: 10px;
+      padding: 15px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .details {
+      flex-grow: 1;
+    }
+
+    .meta {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .delete-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .delete-btn:hover {
+      background-color: #b02a37;
+    }
+
+    /* Dark Mode Styles */
+    body.dark {
+      background: #121212;
+      color: #f1f1f1;
+    }
+
+    body.dark .container {
+      background: #1e1e1e;
+      box-shadow: 0 4px 10px rgba(255, 255, 255, 0.05);
+    }
+
+    body.dark input,
+    body.dark select,
+    body.dark button {
+      background: #2c2c2c;
+      color: #f1f1f1;
+      border-color: #444;
+    }
+
+    body.dark li {
+      background-color: #2a2a2a;
+      border-left-color: #0d6efd;
+    }
+
+    body.dark .delete-btn {
+      background-color: #bb2d3b;
+    }
+
+    .mode-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: none;
+      font-size: 22px;
+      cursor: pointer;
+      border: none;
+      color: #333;
+      z-index: 1000;
+      transition: color 0.3s;
+    }
+
+    body.dark .mode-toggle {
+      color: #f1f1f1;
+    }
+  </style>
+</head>
+<body>
+  <!-- 🌙/☀️ Toggle Button -->
+  <button class="mode-toggle" onclick="toggleMode()">🌙</button>
+
+  <div class="container">
+    <h1>📌 My Reminders</h1>
+
+    <input type="text" id="reminderInput" placeholder="Reminder (e.g., Pay bills)">
+    <input type="date" id="startDate">
+    <select id="repeatInterval">
+      <option value="none">Does not repeat</option>
+      <option value="3">Every 3 months</option>
+      <option value="6">Every 6 months</option>
+      <option value="12">Every year</option>
+    </select>
+    <button onclick="addReminder()">Add Reminder</button>
+
+    <ul id="reminderList"></ul>
+  </div>
+
+  <script>
+    const reminderInput = document.getElementById('reminderInput');
+    const startDate = document.getElementById('startDate');
+    const repeatInterval = document.getElementById('repeatInterval');
+    const reminderList = document.getElementById('reminderList');
+
+    let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+
+    function saveReminders() {
+      localStorage.setItem('reminders', JSON.stringify(reminders));
+    }
+
+    function getNextDate(startDate, repeatMonths) {
+      const today = new Date();
+      let next = new Date(startDate);
+
+      while (next < today) {
+        next.setMonth(next.getMonth() + repeatMonths);
+      }
+
+      return next.toISOString().split('T')[0];
+    }
+
+    function addReminder() {
+      const text = reminderInput.value.trim();
+      const date = startDate.value;
+      const interval = repeatInterval.value;
+
+      if (!text || !date) {
+        alert("Please enter both a reminder and a date.");
+        return;
+      }
+
+      reminders.push({
+        text,
+        date,
+        repeatMonths: interval !== "none" ? parseInt(interval) : null
+      });
+
+      reminderInput.value = '';
+      startDate.value = '';
+      repeatInterval.value = 'none';
+
+      saveReminders();
+      displayReminders();
+    }
+
+    function deleteReminder(index) {
+      reminders.splice(index, 1);
+      saveReminders();
+      displayReminders();
+    }
+
+    function displayReminders() {
+      reminderList.innerHTML = '';
+      reminders.forEach((reminder, index) => {
+        let dueDate = reminder.date;
+        if (reminder.repeatMonths) {
+          dueDate = getNextDate(reminder.date, reminder.repeatMonths);
+        }
+
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div class="details">
+            <strong>${reminder.text}</strong>
+            <div class="meta">
+              Next due: ${dueDate}
+              ${reminder.repeatMonths ? `(repeats every ${reminder.repeatMonths} months)` : ''}
+            </div>
+          </div>
+          <button class="delete-btn" onclick="deleteReminder(${index})">Delete</button>
+        `;
+        reminderList.appendChild(li);
+      });
+    }
+
+    // 🌙 Dark/Light Mode Toggle
+    function toggleMode() {
+      const isDark = document.body.classList.toggle('dark');
+      localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+      document.querySelector('.mode-toggle').textContent = isDark ? '☀️' : '🌙';
+    }
+
+    // Load saved mode + reminders
+    window.onload = () => {
+      if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+        document.querySelector('.mode-toggle').textContent = '☀️';
+      }
+      displayReminders();
+    };
+  </script>
+</body>
+</html>
